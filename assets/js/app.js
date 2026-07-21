@@ -11,8 +11,29 @@ import { calculateAssessment, DAY_KEYS, formatDuration, roundTo } from './scorin
 const STORAGE_KEY = 'caretime-nurse:prototype:v1';
 const DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
 
-/** @type {{rules: object, clients: object[], state: object}} */
-const app = { rules: null, clients: [], state: null };
+/** @type {{rules: object, clients: object[], profiles: object, nurse: object, state: object}} */
+const app = { rules: null, clients: [], profiles: null, nurse: null, state: null };
+
+/**
+ * The signing nurse's display label, e.g. "Michelle Hardy, RN".
+ * Read from data/nurse-profiles.json so no identity is hard-coded in the UI.
+ * @returns {string}
+ */
+function nurseLabel(nurse = app.nurse) {
+  if (!nurse) return 'Unidentified nurse';
+  return nurse.credential ? `${nurse.displayName}, ${nurse.credential}` : nurse.displayName;
+}
+
+/** The manager responsible for a given nurse. @returns {object|null} */
+function managerFor(nurse) {
+  if (!nurse || !app.profiles) return null;
+  return app.profiles.managers.find((m) => m.id === nurse.managerId) || null;
+}
+
+/** Clients assigned to a given nurse. @returns {object[]} */
+function caseloadFor(nurseId) {
+  return app.clients.filter((c) => c.nurseId === nurseId);
+}
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -78,23 +99,55 @@ function showScreen(name) {
   if (name === 'results') renderResults();
 }
 
+/** Paint the signed-in nurse into the top bar. */
+function renderIdentity() {
+  const mgr = managerFor(app.nurse);
+  $('#nurse-name').textContent = nurseLabel();
+  $('#nurse-role').textContent = mgr ? `${app.nurse.role} · reports to ${mgr.displayName}` : app.nurse.role;
+  $('#nurse-initials').textContent = app.nurse.initials || '';
+}
+
+/** Prototype-only control for viewing the product as each nurse. */
+function renderNurseSwitcher() {
+  $('#nurse-switcher').innerHTML = app.profiles.profiles
+    .map(
+      (p) =>
+        `<option value="${esc(p.id)}" ${p.id === app.nurse.id ? 'selected' : ''}>` +
+        `${esc(nurseLabel(p))} — ${caseloadFor(p.id).length} clients</option>`
+    )
+    .join('');
+}
+
+function switchNurse(nurseId) {
+  const next = app.profiles.profiles.find((p) => p.id === nurseId);
+  if (!next) return;
+  app.nurse = next;
+  app.state = blankState();
+  saveState();
+  renderIdentity();
+  renderDashboard();
+  renderClients($('#client-search').value || '');
+  showScreen('dashboard');
+}
+
 // ---------------------------------------------------------------------------
 // Dashboard & clients
 // ---------------------------------------------------------------------------
 
 function renderDashboard() {
+  const mine = caseloadFor(app.nurse.id);
   const counts = {
-    draft: app.clients.filter((c) => c.status === 'draft').length,
-    due: app.clients.filter((c) => c.status === 'due').length,
-    complete: app.clients.filter((c) => c.status === 'complete').length,
+    draft: mine.filter((c) => c.status === 'draft').length,
+    due: mine.filter((c) => c.status === 'due').length,
+    complete: mine.filter((c) => c.status === 'complete').length,
   };
   $('#dashboard-stats').innerHTML = `
     <article class="stat-card"><span>Drafts</span><strong>${counts.draft}</strong><small>In progress</small></article>
     <article class="stat-card"><span>Reassessments due</span><strong>${counts.due}</strong><small>Scheduled</small></article>
     <article class="stat-card"><span>Current</span><strong>${counts.complete}</strong><small>Signed</small></article>
-    <article class="stat-card"><span>Demo clients</span><strong>${app.clients.length}</strong><small>All fictional</small></article>`;
+    <article class="stat-card"><span>My caseload</span><strong>${mine.length}</strong><small>All fictional</small></article>`;
 
-  $('#recent-clients').innerHTML = app.clients
+  $('#recent-clients').innerHTML = mine
     .map(
       (c) => `<div class="patient-row">
         <div><strong>${esc(c.name)}</strong><span>${esc(c.setting)} · last assessed ${esc(c.lastAssessment)}</span></div>
@@ -108,7 +161,8 @@ const statusClass = (s) => ({ due: 'amber', draft: 'blue', complete: 'green' }[s
 
 function renderClients(filter = '') {
   const q = filter.trim().toLowerCase();
-  const list = app.clients.filter((c) => !q || c.name.toLowerCase().includes(q) || c.mrn.toLowerCase().includes(q));
+  const list = caseloadFor(app.nurse.id)
+    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.mrn.toLowerCase().includes(q));
 
   $('#client-list').innerHTML = list.length
     ? list
@@ -433,7 +487,7 @@ function commitAdjustment() {
 
   const candidate = {
     ...app.state.adjustments,
-    [taskId]: { adjustedWeeklyMinutes: minutes, rationale, adjustedBy: 'Michelle Hardy, RN', adjustedAt: new Date().toISOString() },
+    [taskId]: { adjustedWeeklyMinutes: minutes, rationale, adjustedBy: nurseLabel(), adjustedAt: new Date().toISOString() },
   };
 
   const probe = calculateAssessment(app.rules, { ...buildInput(), adjustments: candidate });
@@ -500,6 +554,8 @@ function wireEvents() {
       return recalculate();
     }
 
+    if (t.id === 'nurse-switcher') return switchNurse(t.value);
+
     if (t.id === 'attest') {
       app.state.attested = t.checked;
       saveState();
@@ -526,6 +582,8 @@ function wireEvents() {
 
     if (t.id === 'client-search') return renderClients(t.value);
 
+    if (t.id === 'nurse-switcher') return switchNurse(t.value);
+
     if (t.id === 'overall-rationale') {
       app.state.overallRationale = t.value;
       saveState();
@@ -546,7 +604,7 @@ function wireEvents() {
   $('#finalize-btn').addEventListener('click', () => {
     const result = app.lastResult;
     $('#finalize-status').textContent =
-      `Signed by Michelle Hardy, RN on ${new Date().toLocaleString()} · matrix ${result.ruleVersion} · ` +
+      `Signed by ${nurseLabel()} on ${new Date().toLocaleString()} · matrix ${result.ruleVersion} · ` +
       `${result.totals.totalAuthorizedWeeklyMinutes} min/week. (Prototype: not persisted to a clinical record.)`;
     $('#finalize-btn').disabled = true;
   });
@@ -570,12 +628,16 @@ async function boot() {
   });
 
   try {
-    const [rules, clients] = await Promise.all([
+    const [rules, clients, profiles] = await Promise.all([
       fetch('data/scoring-rules.json').then((r) => r.json()),
       fetch('data/demo-clients.json').then((r) => r.json()),
+      fetch('data/nurse-profiles.json').then((r) => r.json()),
     ]);
     app.rules = rules;
     app.clients = clients.clients;
+    app.profiles = profiles;
+    app.nurse =
+      profiles.profiles.find((p) => p.id === profiles.activeProfileId) || profiles.profiles[0] || null;
   } catch {
     document.querySelector('.main-content').innerHTML =
       '<div class="empty-state"><p><strong>Could not load scoring rules.</strong></p>' +
@@ -585,6 +647,9 @@ async function boot() {
   }
 
   $('#rule-version').textContent = `v${app.rules.ruleVersion}`;
+  $('#org-name').textContent = app.profiles.organization.name;
+  renderNurseSwitcher();
+  renderIdentity();
   app.state = loadState();
 
   renderDashboard();

@@ -23,7 +23,7 @@
         <div class="brand-mark" aria-hidden="true">CT</div>
         <div>
           <h1>CareTime Nurse</h1>
-          <p>ADL care-time estimator</p>
+          <p id="org-name">ADL care-time estimator</p>
         </div>
       </div>
 
@@ -48,11 +48,17 @@
           <p class="eyebrow" id="today-date"></p>
           <h2 id="screen-title">Nurse dashboard</h2>
         </div>
-        <div class="user-chip">
-          <div class="avatar" aria-hidden="true">MH</div>
-          <div>
-            <strong>Michelle Hardy, RN</strong>
-            <span>Assessment nurse</span>
+        <div class="topbar-right">
+          <div class="nurse-switch">
+            <label for="nurse-switcher">Viewing as</label>
+            <select id="nurse-switcher"></select>
+          </div>
+          <div class="user-chip">
+            <div class="avatar" aria-hidden="true" id="nurse-initials"></div>
+            <div>
+              <strong id="nurse-name">&mdash;</strong>
+              <span id="nurse-role"></span>
+            </div>
           </div>
         </div>
       </header>

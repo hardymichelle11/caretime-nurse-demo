@@ -1,0 +1,77 @@
+{
+  "_notice": "Display data only. This file is PUBLISHED to the public prototype. Never add email addresses, phone numbers, licence numbers or employee IDs here. Authentication identities belong in Firebase Auth in Phase 2 — see docs/SECURITY.md. All names below are fictional except the account owner.",
+  "activeProfileId": "nurse-001",
+  "organization": {
+    "id": "org-001",
+    "name": "Riverbend Community Care",
+    "program": "Michigan HCBS / Personal Care Services"
+  },
+  "managers": [
+    {
+      "id": "mgr-001",
+      "displayName": "Angela Reyes",
+      "credential": "RN, MSN",
+      "role": "Nurse Manager",
+      "initials": "AR",
+      "manages": ["nurse-001", "nurse-002", "nurse-003"]
+    },
+    {
+      "id": "mgr-002",
+      "displayName": "David Okonkwo",
+      "credential": "RN, BSN",
+      "role": "Nurse Administrator",
+      "initials": "DO",
+      "manages": ["nurse-004", "nurse-005"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "nurse-001",
+      "displayName": "Michelle Hardy",
+      "credential": "RN",
+      "role": "Assessment Nurse",
+      "initials": "MH",
+      "managerId": "mgr-001"
+    },
+    {
+      "id": "nurse-002",
+      "displayName": "PENDING — confirm full name",
+      "credential": "RN",
+      "role": "Assessment Nurse",
+      "initials": "RC",
+      "managerId": "mgr-001",
+      "_pending": "Profile requested for a colleague. Display name not yet confirmed. The requesting email address is deliberately not recorded here — it belongs in Firebase Auth in Phase 2, not in a published data file."
+    },
+    {
+      "id": "nurse-003",
+      "displayName": "Priya Raman",
+      "credential": "RN",
+      "role": "Staff Nurse",
+      "initials": "PR",
+      "managerId": "mgr-001"
+    },
+    {
+      "id": "nurse-004",
+      "displayName": "Daniel Whitfield",
+      "credential": "RN",
+      "role": "Charge Nurse",
+      "initials": "DW",
+      "managerId": "mgr-002"
+    },
+    {
+      "id": "nurse-005",
+      "displayName": "Alicia Moreno",
+      "credential": "LPN",
+      "role": "Staff Nurse",
+      "initials": "AM",
+      "managerId": "mgr-002"
+    }
+  ],
+  "roles": [
+    "Staff Nurse",
+    "Assessment Nurse",
+    "Charge Nurse",
+    "Nurse Manager",
+    "Nurse Administrator"
+  ]
+}
