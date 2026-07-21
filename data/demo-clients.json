@@ -1,0 +1,47 @@
+{
+  "_notice": "FICTIONAL DEMONSTRATION DATA ONLY. These are invented people. Do not add real client information to this file.",
+  "clients": [
+    {
+      "id": "demo-001",
+      "name": "James Carter",
+      "mrn": "DEMO-10482",
+      "age": 74,
+      "livingSituation": "withFamily",
+      "setting": "Private home",
+      "status": "due",
+      "statusLabel": "Reassessment due",
+      "informalSupport": "Daughter assists mornings and weekends",
+      "supervisionNeeds": ["confused"],
+      "background": "History of osteoarthritis, chronic low-back pain and reduced endurance. Ambulates with a rolling walker. Fall in the home three months ago with no fracture. Uses a shower chair.",
+      "lastAssessment": "2026-04-14"
+    },
+    {
+      "id": "demo-002",
+      "name": "Linda Moore",
+      "mrn": "DEMO-11876",
+      "age": 81,
+      "livingSituation": "withNonFamily",
+      "setting": "Assisted living",
+      "status": "draft",
+      "statusLabel": "Draft in progress",
+      "informalSupport": "No informal support available",
+      "supervisionNeeds": ["dementia", "wanderingRisk"],
+      "background": "Moderate dementia with intermittent disorientation to place and time. Requires cueing through most self-care tasks. Wanders in the evening. Continent with prompting.",
+      "lastAssessment": "2026-06-02"
+    },
+    {
+      "id": "demo-003",
+      "name": "Robert Ellis",
+      "mrn": "DEMO-10932",
+      "age": 68,
+      "livingSituation": "alone",
+      "setting": "Rehabilitation facility",
+      "status": "complete",
+      "statusLabel": "Current",
+      "informalSupport": "Nephew shops weekly",
+      "supervisionNeeds": ["na"],
+      "background": "Right hemiparesis following stroke eight months ago. Transfers with contact-guard assistance. Indwelling catheter. Independent with eating once the tray is set up.",
+      "lastAssessment": "2026-07-17"
+    }
+  ]
+}

@@ -1,0 +1,373 @@
+{
+  "ruleVersion": "1.0.0",
+  "effectiveDate": "2026-07-20",
+  "status": "draft-pending-clinical-approval",
+  "sourceDocument": {
+    "title": "Michigan HCBS Needs Tool / Personal Care Assessment",
+    "extractedFrom": "supplied spreadsheet (excluded from version control: contains PHI)",
+    "extractionDate": "2026-07-20",
+    "note": "Option text, per-score daily caps, bucket routing and exclusion rules are transcribed from the source tool. Nothing in this file is a CareTime Nurse clinical invention. Items marked \"careTimeAddition\": true are app behaviour, not source rules."
+  },
+  "disclaimer": "This application provides nursing decision support only. Final assessments and care recommendations remain the responsibility of the licensed nurse.",
+  "calculation": {
+    "model": "capped-daily-entry",
+    "description": "The nurse selects exactly one score (1-5) per task. That score sets a maximum permitted minutes-per-day. The nurse then enters actual minutes for each day of the week. Weekly minutes = sum(day entries) * (tasksPerDay or 1).",
+    "formula": "weeklyMinutes = (mon+tue+wed+thu+fri+sat+sun) * (tasksPerDay || 1)",
+    "dayKeys": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    "billingUnitMinutes": 15,
+    "unitsFormula": "unitsPerWeek = weeklyMinutes / 15",
+    "hoursFormula": "hoursPerWeek = weeklyMinutes / 60",
+    "arithmetic": {
+      "storeAs": "integer-hundredths-of-a-minute",
+      "rationale": "The source spreadsheet uses fractional entries such as 8.33 min/task, producing float drift (1080.9299999999998 instead of 1080.93). CareTime Nurse stores minutes as integer hundredths and divides only at display time. Hundredths, not tenths, because source entries carry two decimal places.",
+      "careTimeAddition": true
+    },
+    "rounding": {
+      "displayMinutes": "round-half-up to 2 decimal places",
+      "displayHours": "round-half-up to 2 decimal places",
+      "displayUnits": "round-half-up to 2 decimal places"
+    }
+  },
+  "authorizationRouting": {
+    "description": "Derived from the source tool's subtotal formulas. Score 1-2 selections total into the ECLS bucket; score 3-5 selections total into the PCS bucket.",
+    "sourceText": "Rank of 3 or higher must be authorized as Personal Care",
+    "buckets": {
+      "ECLS": {
+        "label": "Expanded Community Living Supports (supervision / cueing)",
+        "scores": [1, 2]
+      },
+      "PCS": {
+        "label": "Personal Care Services (hands-on)",
+        "scores": [3, 4, 5]
+      }
+    },
+    "complexCareBucket": "PCS",
+    "complexCareNote": "Complex Care tasks cannot be authorized as ECLS. They may be authorized as Personal Care only if the caregiver can safely demonstrate the task."
+  },
+  "supervisorReview": {
+    "thresholdHoursPerWeek": 20,
+    "requirement": "Supervisor co-signature is required when total authorized time exceeds 20 hours per week.",
+    "sourceText": "Supervisor Signature >20hrs"
+  },
+  "serviceContinuity": {
+    "newMemberDays": 90,
+    "sourceText": "New members not on the HAB Waiver have the right to continue their current service hours for up to 90 days from date of enrollment."
+  },
+  "exclusionRules": [
+    {
+      "id": "bathing-includes-transfer",
+      "appliesTo": "transferring",
+      "conflictsWith": ["bathing"],
+      "severity": "error",
+      "sourceText": "Transferring - Excludes bathing and Toileting Transfers. Transfer included in Bathing time.",
+      "check": "Transferring minutes must not include transfers already counted inside bathing or toileting.",
+      "enforcement": "advisory-prompt"
+    },
+    {
+      "id": "toileting-superseded-by-catheter-and-colostomy",
+      "appliesTo": "toileting",
+      "conflictsWith": ["catheterCare", "colostomyCare"],
+      "severity": "error",
+      "sourceText": "If the member receives care for both a catheter and colostomy then no minutes are given for Toileting - instead proceed down to catheter care and colostomy care",
+      "check": "If BOTH catheterCare AND colostomyCare have minutes > 0, toileting weeklyMinutes must be 0.",
+      "enforcement": "hard-block"
+    },
+    {
+      "id": "supervision-not-already-counted",
+      "appliesTo": "generalSupervision",
+      "conflictsWith": ["*"],
+      "severity": "warning",
+      "sourceText": "Only enter supervision time here if it is not covered in any of the other sections (such as supervision for a task).",
+      "check": "General supervision must not duplicate cueing or supervision already captured by a task score of 2.",
+      "enforcement": "advisory-prompt"
+    },
+    {
+      "id": "ifs-excluded-from-authorization",
+      "appliesTo": "*",
+      "severity": "info",
+      "sourceText": "Tasks completed by Informal Supports must be marked \"IFS\" on the spreadsheet to clearly identify when IFS is being provided.",
+      "check": "Minutes marked as provided by Informal Supports are recorded but excluded from paid authorization totals.",
+      "enforcement": "exclude-from-total"
+    }
+  ],
+  "adjustmentPolicy": {
+    "careTimeAddition": true,
+    "rationaleRequiredWhen": [
+      { "id": "exceeds-cap", "description": "Any day entry exceeds the selected score's maxDailyMinutes." },
+      { "id": "variance-threshold", "description": "Nurse-adjusted weekly minutes differ from calculated by more than the threshold.", "thresholdPercent": 20 },
+      { "id": "override-exclusion", "description": "Nurse overrides a hard exclusion rule." },
+      { "id": "finalize-incomplete", "description": "Nurse finalizes with required fields missing." },
+      { "id": "soft-cap-exceeded", "description": "Nurse exceeds a task's advisory soft cap (e.g. bathing 45 min/day)." }
+    ],
+    "neverOverwrite": "The calculated value is always preserved alongside the adjusted value and the final approved value."
+  },
+  "tasks": [
+    {
+      "id": "lightHousekeeping",
+      "label": "Light Housekeeping & Cleaning",
+      "category": "IADL",
+      "part": 1,
+      "usesTasksPerDay": false,
+      "sourceRows": "13-17",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required" },
+        { "score": 2, "maxDailyMinutes": 12, "text": "Performs all tasks but needs reminding or direction from another." },
+        { "score": 3, "maxDailyMinutes": 12, "text": "Requires minimal assistance from another for some tasks due to limited endurance or limitations in bending, stooping or reaching." },
+        { "score": 4, "maxDailyMinutes": 12, "text": "Requires assistance for most tasks although enrollee is able to perform a few simple tasks alone such as dusting and wiping counters." },
+        { "score": 5, "maxDailyMinutes": 12, "text": "Totally dependent on another for housecleaning." }
+      ]
+    },
+    {
+      "id": "laundry",
+      "label": "Laundry",
+      "category": "IADL",
+      "part": 1,
+      "usesTasksPerDay": false,
+      "sourceRows": "19-23",
+      "note": "Folding and putting away laundry is included.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 14, "text": "Performs all tasks but needs reminding or direction to do laundry on a regular basis or to do it properly." },
+        { "score": 3, "maxDailyMinutes": 14, "text": "Minimal hands-on assistance required with some tasks but is able to do most laundry without assistance." },
+        { "score": 4, "maxDailyMinutes": 14, "text": "Requires hands-on assistance from another person with most aspects of laundry. Is able to perform some laundry tasks such as folding small clothing items or putting clothes away." },
+        { "score": 5, "maxDailyMinutes": 14, "text": "Totally dependent on another for laundry." }
+      ]
+    },
+    {
+      "id": "medications",
+      "label": "Taking Medication",
+      "category": "IADL",
+      "part": 1,
+      "usesTasksPerDay": true,
+      "tasksPerDayLabel": "Medication passes per day",
+      "sourceRows": "25-29",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,    "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": null, "text": "Enrollee is able to take all medications but needs reminding or direction." },
+        { "score": 3, "maxDailyMinutes": null, "text": "Enrollee is able to take all medication if someone assists in measuring dosages or prepares administration schedule." },
+        { "score": 4, "maxDailyMinutes": null, "text": "Enrollee is able to take some medication if another person assists in preparation, but needs someone to assist in administering other medications." },
+        { "score": 5, "maxDailyMinutes": null, "text": "Totally dependent on another. Does not take medication unless someone assists in administering." }
+      ],
+      "maxDailyMinutesNote": "Source records \"No Limit\" for scores 2-5. Represented as null (uncapped)."
+    },
+    {
+      "id": "shopping",
+      "label": "Shopping",
+      "category": "IADL",
+      "part": 1,
+      "usesTasksPerDay": false,
+      "sourceRows": "31-35",
+      "note": "Including medication pick-up.",
+      "openQuestion": "Source cap is 10 min/day, but the reference assessment recorded 45 minutes on a single day. Cap may be intended as a weekly allowance. Requires clarification from the tool owner before enforcement.",
+      "capEnforcement": "advisory-only-pending-clarification",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 10, "text": "Verbal direction, prompting or reminding is required for shopping." },
+        { "score": 3, "maxDailyMinutes": 10, "text": "Minimal hands-on assistance required for some tasks (grocery shopping) but enrollee can compile a list and go to nearby store for small items." },
+        { "score": 4, "maxDailyMinutes": 10, "text": "Requires hands-on assistance from another person with most aspects of shopping but enrollee is able to accompany and select needed items." },
+        { "score": 5, "maxDailyMinutes": 10, "text": "Totally dependent on another for shopping." }
+      ]
+    },
+    {
+      "id": "mealPrep",
+      "label": "Meal Preparation",
+      "category": "IADL",
+      "part": 1,
+      "usesTasksPerDay": true,
+      "tasksPerDayLabel": "Meals per day",
+      "sourceRows": "37-41",
+      "note": "Includes all meal-related clean up.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 30, "text": "Verbal direction, prompting or reminding is required for menu planning, meal preparation or clean up." },
+        { "score": 3, "maxDailyMinutes": 50, "text": "Minimal hands-on assistance required for some meals. Enrollee is able to reheat food prepared by another and/or prepare simple meals/snacks." },
+        { "score": 4, "maxDailyMinutes": 50, "text": "Requires another person to prepare most meals and do clean-up." },
+        { "score": 5, "maxDailyMinutes": 50, "text": "Totally dependent on another for meal preparation." }
+      ]
+    },
+    {
+      "id": "eatingFeeding",
+      "label": "Eating & Feeding",
+      "category": "ADL",
+      "part": 2,
+      "usesTasksPerDay": true,
+      "tasksPerDayLabel": "Meals per day requiring assistance",
+      "sourceRows": "48-52",
+      "note": "Enter number of meals eaten per day requiring assistance, then enter the time per meal.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 40, "text": "Verbal assistance or prompting required. Enrollee must be prompted or reminded to eat." },
+        { "score": 3, "maxDailyMinutes": 44, "text": "Minimal hands-on assistance or assistive technology needed. Help with cutting up food or pushing food within reach; help with applying assistive devices. The constant presence of another person is not required." },
+        { "score": 4, "maxDailyMinutes": 50, "text": "Moderate hands-on assistance required. Enrollee has some ability to feed self but is unable to hold utensils, cup, glass and requires the constant presence of another person while eating." },
+        { "score": 5, "maxDailyMinutes": 56, "text": "Totally dependent on others in all areas of eating." }
+      ]
+    },
+    {
+      "id": "bathing",
+      "label": "Bathing",
+      "category": "ADL",
+      "part": 2,
+      "usesTasksPerDay": false,
+      "sourceRows": "54-58",
+      "note": "As needed per week. Transfer is included in bathing time.",
+      "softCapDailyMinutes": 45,
+      "softCapSourceText": "In general, not to exceed 45 minutes per day.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required. Bathes self safely without help from another person." },
+        { "score": 2, "maxDailyMinutes": 14, "text": "Bathes self with direction or intermittent monitoring. May need reminding to maintain personal hygiene." },
+        { "score": 3, "maxDailyMinutes": 16, "text": "Minimal hands-on assistance or assistive technology required to carry out task. Generally bathes self but needs some assistance with cleaning hard to reach areas; getting in/out of tub/shower. Enrollee is able to sponge bath but another person must bring water, soap, or towel. Enrollee relies on a bath or transfer bench when bathing. The constant presence of another is not required." },
+        { "score": 4, "maxDailyMinutes": 18, "text": "Requires direct hands-on assistance with most aspects of bathing. Would be at risk if left alone." },
+        { "score": 5, "maxDailyMinutes": 22, "text": "Totally dependent on others in all areas of bathing." }
+      ]
+    },
+    {
+      "id": "dressing",
+      "label": "Dressing",
+      "category": "ADL",
+      "part": 2,
+      "usesTasksPerDay": false,
+      "sourceRows": "60-64",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 12, "text": "Enrollee is able to dress self but requires reminding or direction in clothing selection." },
+        { "score": 3, "maxDailyMinutes": 14, "text": "Minimal hands-on assistance or assistive technology required. Enrollee unable to dress self completely (i.e. tying shoes, zipping, buttoning) without the help of another person or assistive device." },
+        { "score": 4, "maxDailyMinutes": 16, "text": "Requires direct hands-on assistance with most aspects of dressing. Without assistance would be inappropriately or inadequately dressed." },
+        { "score": 5, "maxDailyMinutes": 18, "text": "Totally dependent on others in all areas of dressing." }
+      ]
+    },
+    {
+      "id": "grooming",
+      "label": "Grooming",
+      "category": "ADL",
+      "part": 2,
+      "usesTasksPerDay": false,
+      "sourceRows": "66-70",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 6,  "text": "Grooms self with direction or intermittent monitoring. May need reminding to maintain personal hygiene." },
+        { "score": 3, "maxDailyMinutes": 8,  "text": "Minimal hands-on assistance required. Grooms self but needs some assistance with activities of personal hygiene." },
+        { "score": 4, "maxDailyMinutes": 10, "text": "Requires direct hands-on assistance with most aspects of grooming. Would be at risk if left alone." },
+        { "score": 5, "maxDailyMinutes": 12, "text": "Totally dependent on others in all areas of grooming." }
+      ]
+    },
+    {
+      "id": "toileting",
+      "label": "Toileting",
+      "category": "ADL",
+      "part": 3,
+      "usesTasksPerDay": false,
+      "sourceRows": "77-81",
+      "note": "If the member receives care for both a catheter and a colostomy, no minutes are given for toileting; use catheter care and colostomy care instead.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 18, "text": "Verbal direction, prompting or reminding is required." },
+        { "score": 3, "maxDailyMinutes": 22, "text": "Minimal hands-on assistance or assistive technology needed with some activities. The constant presence of another person while toileting is not necessary." },
+        { "score": 4, "maxDailyMinutes": 26, "text": "The enrollee does not carry out most activities without human assistance." },
+        { "score": 5, "maxDailyMinutes": 28, "text": "Totally dependent on others in all areas of toileting." }
+      ]
+    },
+    {
+      "id": "mobility",
+      "label": "Mobility",
+      "category": "ADL",
+      "part": 3,
+      "usesTasksPerDay": false,
+      "sourceRows": "83-87",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required even though the enrollee may experience some difficulty or discomfort. Completion of the task poses no risk to safety." },
+        { "score": 2, "maxDailyMinutes": 14, "text": "Enrollee is able to move independently with only reminding or encouragement. For example, needs reminding to lock a brace, unlock a wheelchair or to use a cane." },
+        { "score": 3, "maxDailyMinutes": 14, "text": "Minimal hands-on assistance required for specific maneuvers with a wheelchair, negotiating stairs or moving on certain surfaces. Without the use of a walker or pronged cane, enrollee would need physical assistance." },
+        { "score": 4, "maxDailyMinutes": 16, "text": "Requires hands-on assistance from another person with most aspects of mobility. Would be at risk if unassisted." },
+        { "score": 5, "maxDailyMinutes": 18, "text": "Totally dependent on others for all mobility. Must be carried, lifted or pushed in a wheelchair or gurney at all times." }
+      ]
+    },
+    {
+      "id": "transferring",
+      "label": "Transferring",
+      "category": "ADL",
+      "part": 3,
+      "usesTasksPerDay": false,
+      "sourceRows": "89-93",
+      "note": "Excludes bathing and toileting transfers.",
+      "options": [
+        { "score": 1, "maxDailyMinutes": 0,  "text": "No assistance required." },
+        { "score": 2, "maxDailyMinutes": 6,  "text": "Enrollee is able to transfer but requires encouragement or direction." },
+        { "score": 3, "maxDailyMinutes": 6,  "text": "Minimal hands-on assistance needed from another person for routine boosts or positioning. Enrollee unable to routinely transfer without the help of another or assistive technology such as a lift chair." },
+        { "score": 4, "maxDailyMinutes": 8,  "text": "Requires direct hands-on assistance with most aspects of transferring. Would be at risk if unassisted." },
+        { "score": 5, "maxDailyMinutes": 10, "text": "Totally dependent on others for all transfers. Must be lifted or mechanically transferred." }
+      ]
+    }
+  ],
+  "complexCare": {
+    "part": 3,
+    "bucket": "PCS",
+    "eclsEligible": false,
+    "sourceText": "The services listed below are Complex Care tasks that cannot be authorized as ECLS. These services can be authorized as Personal Care only if the caregiver is able to demonstrate properly and safely perform the task.",
+    "usesTasksPerDay": true,
+    "items": [
+      { "id": "feedingTubeBlended",   "group": "Eating and Feeding with Feeding Tube", "maxDailyMinutes": 135, "text": "Blended meals and throat massage" },
+      { "id": "feedingTube4x",        "group": "Eating and Feeding with Feeding Tube", "maxDailyMinutes": 80,  "text": "Feeding tube or supplemental food bag up to 4 times per day (typically 20 minutes/task)" },
+      { "id": "feedingTube6x",        "group": "Eating and Feeding with Feeding Tube", "maxDailyMinutes": 120, "text": "Feeding tube or supplemental food bag up to 6 times per day (typically 20 minutes/task)" },
+      { "id": "catheterIndwelling",   "group": "Catheters or Leg Bags (toileting)",    "maxDailyMinutes": 60,  "text": "In-dwelling (Foley), 10 minutes every 4 hours" },
+      { "id": "catheterIntermittent", "group": "Catheters or Leg Bags (toileting)",    "maxDailyMinutes": 90,  "text": "Intermittent, 15 minutes every 4 hours" },
+      { "id": "colostomyOnce",        "group": "Colostomy Care (toileting)",           "maxDailyMinutes": 20,  "text": "If performed once/day max is 20 minutes/day" },
+      { "id": "colostomyTwice",       "group": "Colostomy Care (toileting)",           "maxDailyMinutes": 40,  "text": "If performed twice/day max is 40 minutes/day" },
+      { "id": "bowelProgram",         "group": "Bowel Program",                        "maxDailyMinutes": 120, "text": "Typically performed every other day. Max time is per day." },
+      { "id": "suctioning",           "group": "Suctioning",                           "maxDailyMinutes": 10,  "text": "During meal or as needed." },
+      { "id": "skinCareTurning",      "group": "Specialized Skin Care",                "maxDailyMinutes": 50,  "text": "Turning at night - 10 minutes every 2 hours for 10 hours" },
+      { "id": "skinCareMassage",      "group": "Specialized Skin Care",                "maxDailyMinutes": 15,  "text": "Massage to prevent decubitus ulcers once/day - staff with supervisor if completed more frequently" },
+      { "id": "romOnce",              "group": "Range of Motion Exercises",            "maxDailyMinutes": 30,  "text": "If completed once per day max is 30 minutes/day" },
+      { "id": "romTwice",             "group": "Range of Motion Exercises",            "maxDailyMinutes": 60,  "text": "If completed twice/day max is 60 minutes/day" },
+      { "id": "peritonealDialysis",   "group": "Peritoneal Dialysis",                  "maxDailyMinutes": null, "text": "Not yet determined by the state", "limitUndetermined": true },
+      { "id": "woundCare",            "group": "Wound Care",                           "maxDailyMinutes": null, "text": "Not yet determined by the state", "limitUndetermined": true },
+      { "id": "respiratoryTreatment", "group": "Respiratory Treatment",                "maxDailyMinutes": null, "text": "Not yet determined by the state", "limitUndetermined": true },
+      { "id": "ventilators",          "group": "Ventilators",                          "maxDailyMinutes": null, "text": "Not yet determined by the state", "limitUndetermined": true },
+      { "id": "injections",           "group": "Injections",                           "maxDailyMinutes": null, "text": "Not yet determined by the state", "limitUndetermined": true }
+    ],
+    "romNote": "Range of Motion here is a caregiver-delivered, nurse-documented service task with a time allowance. It is not an automated measurement of joint range and involves no sensors or devices."
+  },
+  "generalSupervision": {
+    "id": "generalSupervision",
+    "label": "General Supervision",
+    "bucket": "ECLS",
+    "usesTasksPerDay": false,
+    "maxDailyMinutes": null,
+    "sourceRow": "121",
+    "sourceText": "Supervision is based on need when informal supports are not able to supervise. Only enter supervision time here if it is not covered in any of the other sections (such as supervision for a task).",
+    "knownSourceDefect": "In the source spreadsheet, the General Supervision total cell sums the score-2 rows of other tasks and does NOT read the day cells on its own row. Minutes typed into that row appear to be silently discarded. CareTime Nurse treats general supervision as a first-class entry and totals it directly. Requires confirmation from the tool owner.",
+    "careTimeAddition": true
+  },
+  "supervisionNeedFlags": [
+    { "id": "dementia",       "label": "Dementia / Alzheimer's" },
+    { "id": "wanderingRisk",  "label": "Wandering risk" },
+    { "id": "confused",       "label": "Confused / disoriented, at risk to themselves" },
+    { "id": "cannotCallHelp", "label": "Unable to call for help, even with lifeline" },
+    { "id": "na",             "label": "Not applicable", "exclusive": true }
+  ],
+  "livingSituations": [
+    { "id": "alone",         "label": "Lives alone" },
+    { "id": "withFamily",    "label": "Lives with family" },
+    { "id": "withNonFamily", "label": "Lives with non-family" }
+  ],
+  "informationSources": [
+    { "id": "clientInterview",     "label": "Client interview",            "evidenceType": "reported" },
+    { "id": "caregiverInterview",  "label": "Caregiver interview",         "evidenceType": "reported" },
+    { "id": "familyInterview",     "label": "Family interview",            "evidenceType": "reported" },
+    { "id": "nurseObservation",    "label": "Direct nurse observation",    "evidenceType": "observed" },
+    { "id": "dischargeSummary",    "label": "Hospital discharge summary",  "evidenceType": "documented" },
+    { "id": "physicianNotes",      "label": "Physician notes",             "evidenceType": "documented" },
+    { "id": "nursingNotes",        "label": "Nursing notes",               "evidenceType": "documented" },
+    { "id": "therapyNotes",        "label": "Therapy notes",               "evidenceType": "documented" },
+    { "id": "medicationList",      "label": "Medication list",             "evidenceType": "documented" },
+    { "id": "priorAssessment",     "label": "Prior assessment",            "evidenceType": "documented" },
+    { "id": "homeHealthDocs",      "label": "Home-health documentation",   "evidenceType": "documented" },
+    { "id": "facilityDocs",        "label": "Facility documentation",      "evidenceType": "documented" },
+    { "id": "otherRecords",        "label": "Other clinical records",      "evidenceType": "documented" }
+  ],
+  "evidenceTypes": [
+    { "id": "reported",   "label": "Reported",            "description": "Stated by the client, family or caregiver." },
+    { "id": "observed",   "label": "Observed",            "description": "Directly observed by the assessing nurse." },
+    { "id": "documented", "label": "Documented",          "description": "Recorded in a clinical record." },
+    { "id": "conclusion", "label": "Nurse conclusion",    "description": "The nurse's professional judgment drawn from the above." }
+  ]
+}

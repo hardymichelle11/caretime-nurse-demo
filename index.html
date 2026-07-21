@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareTime Nurse — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <div class="prototype-banner" role="note">
+    <strong>Prototype only. Do not enter real patient information.</strong>
+    <span>All clients shown are fictional.</span>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">CT</div>
+        <div>
+          <h1>CareTime Nurse</h1>
+          <p>ADL care-time estimator</p>
+        </div>
+      </div>
+
+      <nav aria-label="Main">
+        <button class="nav-item active" data-screen="dashboard" aria-current="page">Dashboard</button>
+        <button class="nav-item" data-screen="patients">Clients</button>
+        <button class="nav-item" data-screen="assessment">Assessment</button>
+        <button class="nav-item" data-screen="results">Results</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>Clinical decision support</strong>
+        <p>Final assessments and care recommendations remain the responsibility of the licensed nurse.</p>
+      </div>
+
+      <p class="rule-stamp">Scoring matrix <span id="rule-version">—</span></p>
+    </aside>
+
+    <main class="main-content" id="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="today-date"></p>
+          <h2 id="screen-title">Nurse dashboard</h2>
+        </div>
+        <div class="user-chip">
+          <div class="avatar" aria-hidden="true">MH</div>
+          <div>
+            <strong>Michelle Hardy, RN</strong>
+            <span>Assessment nurse</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============================= DASHBOARD ============================= -->
+      <section id="dashboard" class="screen active" tabindex="-1">
+        <div class="hero-card">
+          <div>
+            <span class="badge">Phase 1 prototype</span>
+            <h3>Complete a functional-needs assessment in minutes.</h3>
+            <p>Record assistance levels, weekly care minutes, safety concerns and a transparent care-time estimate you can adjust and sign.</p>
+          </div>
+          <button class="primary" data-go="patients">Start new assessment</button>
+        </div>
+
+        <div class="stat-grid" id="dashboard-stats"></div>
+
+        <div class="panel-grid">
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Recent clients</h3>
+              <button class="text-btn" data-go="patients">View all</button>
+            </div>
+            <div id="recent-clients"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header"><h3>How this tool calculates</h3></div>
+            <ol class="explainer">
+              <li>Select <strong>one score, 1&ndash;5</strong>, for each task.</li>
+              <li>That score sets a <strong>maximum minutes per day</strong>.</li>
+              <li>Enter the <strong>actual minutes for each day</strong> of the week.</li>
+              <li>Weekly minutes = sum of the seven days &times; tasks per day.</li>
+            </ol>
+            <p class="muted small">Scores 1&ndash;2 route to supervision (ECLS). Scores 3&ndash;5 route to personal care (PCS). One billing unit is 15 minutes.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============================= CLIENTS ============================= -->
+      <section id="patients" class="screen" tabindex="-1">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Client directory</p>
+            <h3>Select a client to assess</h3>
+          </div>
+        </div>
+        <div class="search-box">
+          <label class="visually-hidden" for="client-search">Search clients</label>
+          <input id="client-search" type="search" placeholder="Search by name or record number" />
+        </div>
+        <div class="patient-list" id="client-list"></div>
+      </section>
+
+      <!-- ============================= ASSESSMENT ============================= -->
+      <section id="assessment" class="screen" tabindex="-1">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Functional assessment</p>
+            <h3 id="assessment-client-name">No client selected</h3>
+          </div>
+          <span class="save-state" id="save-state" role="status" aria-live="polite">Not started</span>
+        </div>
+
+        <div id="assessment-empty" class="empty-state">
+          <p>Select a client before starting an assessment.</p>
+          <button class="primary" data-go="patients">Choose a client</button>
+        </div>
+
+        <div id="assessment-body" hidden>
+          <details class="client-context" open>
+            <summary>Client background and information sources</summary>
+            <div class="context-inner">
+              <p id="client-background" class="muted"></p>
+              <fieldset class="sources">
+                <legend>Which information sources did you use?</legend>
+                <div id="source-options" class="check-grid"></div>
+              </fieldset>
+            </div>
+          </details>
+
+          <div class="assessment-layout">
+            <div class="task-column" id="task-list"></div>
+
+            <aside class="summary-card" aria-labelledby="live-estimate-heading">
+              <p class="eyebrow" id="live-estimate-heading">Live estimate</p>
+              <strong id="weekly-total" aria-live="polite">0 min</strong>
+              <span>Authorized minutes per week</span>
+              <hr />
+              <div class="summary-line"><span>Personal care (PCS)</span><strong id="sum-pcs">0</strong></div>
+              <div class="summary-line"><span>Supervision (ECLS)</span><strong id="sum-ecls">0</strong></div>
+              <div class="summary-line"><span>Informal support</span><strong id="sum-ifs">0</strong></div>
+              <div class="summary-line"><span>Hours per week</span><strong id="sum-hours">0</strong></div>
+              <div class="summary-line"><span>Billing units</span><strong id="sum-units">0</strong></div>
+              <hr />
+              <div id="cosign-flag" class="flag" hidden>Exceeds 20 hours per week — supervisor co-signature required.</div>
+              <div id="violation-summary" class="violation-summary" role="status" aria-live="polite"></div>
+              <button class="primary full" data-go="results">Review results</button>
+              <small>Calculations are transparent and may be adjusted by the nurse with a documented rationale.</small>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================= RESULTS ============================= -->
+      <section id="results" class="screen" tabindex="-1">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Assessment results</p>
+            <h3 id="results-client-name">No client selected</h3>
+          </div>
+          <button class="secondary" id="print-report">Print / save as PDF</button>
+        </div>
+
+        <div id="results-empty" class="empty-state">
+          <p>Complete an assessment to see results.</p>
+          <button class="primary" data-go="assessment">Go to assessment</button>
+        </div>
+
+        <div id="results-body" hidden>
+          <div class="result-hero">
+            <div>
+              <span>Total authorized care</span>
+              <strong id="result-total">—</strong>
+              <small id="result-daily">—</small>
+            </div>
+            <div class="confidence">
+              <span>Tasks assessed</span>
+              <strong id="result-completeness">—</strong>
+              <small id="result-completeness-note">—</small>
+            </div>
+          </div>
+
+          <div id="result-blockers" class="blocker-panel" hidden></div>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Care-time breakdown</h3>
+              <span class="muted small">Weekly minutes by task</span>
+            </div>
+            <div id="result-breakdown"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header"><h3>Nurse review and adjustment</h3></div>
+            <p class="muted small">Adjusting a value by more than 20% requires a documented clinical rationale. The calculated value is always preserved.</p>
+            <div id="adjustment-list"></div>
+          </article>
+
+          <article class="panel rationale-panel">
+            <div class="panel-header"><h3>Nursing rationale and signature</h3></div>
+            <label for="overall-rationale">Overall nursing recommendation</label>
+            <textarea id="overall-rationale" rows="4" placeholder="Summarise the client's functional needs and the basis for this recommendation."></textarea>
+
+            <div class="confirm-box">
+              <label>
+                <input type="checkbox" id="attest" />
+                I confirm that this assessment reflects the client's current condition and my nursing judgment.
+              </label>
+            </div>
+
+            <p class="disclaimer" id="disclaimer-text"></p>
+            <p class="muted small">These figures do not imply program eligibility, insurance approval or guaranteed service authorization.</p>
+
+            <div class="form-actions">
+              <button class="secondary" data-go="assessment">Return to assessment</button>
+              <button class="primary" id="finalize-btn" disabled>Sign and finalize</button>
+            </div>
+            <p id="finalize-status" role="status" aria-live="polite" class="muted small"></p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Adjustment dialog -->
+  <dialog id="adjust-dialog">
+    <form method="dialog" id="adjust-form">
+      <h3 id="adjust-title">Adjust estimate</h3>
+      <p class="muted small" id="adjust-calculated"></p>
+
+      <label for="adjust-minutes">Adjusted weekly minutes</label>
+      <input type="number" id="adjust-minutes" min="0" step="0.01" required />
+
+      <label for="adjust-rationale">Clinical rationale <span id="rationale-required" hidden>(required)</span></label>
+      <textarea id="adjust-rationale" rows="3" placeholder="Explain why the calculated value does not reflect this client's actual needs."></textarea>
+      <p class="field-error" id="adjust-error" role="alert" hidden></p>
+
+      <div class="form-actions">
+        <button class="secondary" value="cancel" formnovalidate>Cancel</button>
+        <button class="primary" value="save" id="adjust-save">Save adjustment</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

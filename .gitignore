@@ -1,0 +1,15 @@
+# This is a PUBLIC repository. Nothing PHI-bearing may ever enter it.
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*HCBS*
+*Needs Tool*
+
+.env
+.env.*
+*.key
+*.pem
+node_modules/
+.DS_Store
+Thumbs.db
