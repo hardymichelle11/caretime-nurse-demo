@@ -523,6 +523,31 @@ export function calculateAssessment(rules, input = {}) {
   const unitMinutes = rules.calculation.billingUnitMinutes;
   const hoursPerWeek = fromHundredths(totalAuthorized) / 60;
 
+  // Category rollup for the results summary. Each line carries exactly one
+  // category, so these areas partition the authorized total without overlap.
+  // Informal-support time is excluded here and reported on its own, matching
+  // how it is kept out of the authorized total above.
+  const AREA_KEYS = ['IADL', 'ADL', 'COMPLEX', 'SUPERVISION'];
+  const areaAcc = Object.fromEntries(AREA_KEYS.map((k) => [k, { hundredths: 0, taskCount: 0 }]));
+  for (const line of adjusted) {
+    if (line.excludedFromAuthorization) continue;
+    const bucket = areaAcc[line.category];
+    if (!bucket) continue; // unknown category is never silently folded elsewhere
+    bucket.hundredths += line.finalWeeklyHundredths;
+    if (line.finalWeeklyHundredths > 0) bucket.taskCount += 1;
+  }
+  const categories = AREA_KEYS.map((key) => {
+    const mins = fromHundredths(areaAcc[key].hundredths);
+    return {
+      key,
+      weeklyMinutes: mins,
+      weeklyHours: roundTo(mins / 60, 2),
+      unitsPerWeek: roundTo(mins / unitMinutes, 2),
+      taskCount: areaAcc[key].taskCount,
+      shareOfTotal: totalAuthorized > 0 ? roundTo((areaAcc[key].hundredths / totalAuthorized) * 100, 1) : 0,
+    };
+  });
+
   const allViolations = [...adjusted.flatMap((l) => l.violations), ...exclusionViolations];
 
   const blocking = allViolations.filter(
@@ -549,6 +574,11 @@ export function calculateAssessment(rules, input = {}) {
       eclsUnitsPerWeek: roundTo(fromHundredths(ecls) / unitMinutes, 2),
       totalUnitsPerWeek: roundTo(fromHundredths(totalAuthorized) / unitMinutes, 2),
       billingUnitMinutes: unitMinutes,
+    },
+    categories,
+    informalSupport: {
+      weeklyMinutes: fromHundredths(ifs),
+      weeklyHours: roundTo(fromHundredths(ifs) / 60, 2),
     },
     requiresSupervisorCosign: hoursPerWeek > rules.supervisorReview.thresholdHoursPerWeek,
     supervisorCosignThresholdHours: rules.supervisorReview.thresholdHoursPerWeek,

@@ -399,6 +399,8 @@ function renderResults() {
     panel.innerHTML = `<h4>Resolve before finalizing</h4><ul>${blockers.map((b) => `<li>${esc(b.message)}</li>`).join('')}</ul>`;
   }
 
+  renderCategoryKpis(result);
+
   // Breakdown
   const max = Math.max(...result.lines.map((l) => l.finalWeeklyMinutes), 1);
   $('#result-breakdown').innerHTML = result.lines
@@ -436,6 +438,89 @@ function renderResults() {
   $('#attest').checked = app.state.attested;
   $('#disclaimer-text').textContent = result.disclaimer;
   updateFinalizeButton(result);
+}
+
+// Clinical-area display metadata. Colours are categorical slots 1-4 from the
+// validated dataviz palette (light / dark). Identity is carried by the label on
+// every tile and legend row, so colour is a secondary channel, not the only one.
+const AREA_META = {
+  IADL:        { label: 'Everyday tasks (IADL)', light: '#2a78d6', dark: '#3987e5' },
+  ADL:         { label: 'Personal care (ADL)',   light: '#eb6834', dark: '#d95926' },
+  COMPLEX:     { label: 'Complex care',          light: '#1baf7a', dark: '#199e70' },
+  SUPERVISION: { label: 'Supervision (ECLS)',    light: '#eda100', dark: '#c98500' },
+};
+
+const prefersDark = () =>
+  window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const areaColor = (key) => {
+  const m = AREA_META[key];
+  return prefersDark() ? m.dark : m.light;
+};
+
+/**
+ * KPI tiles (hours per clinical area) plus a segmented share bar.
+ * A stat-tile job: the headline number is hours, carried in ink; the colour
+ * accent identifies the area alongside its always-present label.
+ */
+function renderCategoryKpis(result) {
+  const cats = result.categories;
+  const totalHours = result.totals.totalAuthorizedWeeklyHours;
+
+  const tiles = [];
+
+  // Lead tile: the total. Emphasised, no category colour.
+  tiles.push(`<div class="kpi-tile kpi-total" role="listitem">
+    <span class="kpi-label">Total authorized</span>
+    <strong class="kpi-value">${totalHours}<span class="kpi-unit">h/wk</span></strong>
+    <span class="kpi-sub">${result.totals.totalAuthorizedWeeklyMinutes} min · ${result.totals.totalUnitsPerWeek} units</span>
+  </div>`);
+
+  for (const c of cats) {
+    const meta = AREA_META[c.key];
+    tiles.push(`<div class="kpi-tile" role="listitem" style="--kpi-accent:${areaColor(c.key)}">
+      <span class="kpi-label"><i class="kpi-dot" aria-hidden="true"></i>${esc(meta.label)}</span>
+      <strong class="kpi-value">${c.weeklyHours}<span class="kpi-unit">h/wk</span></strong>
+      <span class="kpi-sub">${c.weeklyMinutes} min · ${c.unitsPerWeek} units · ${c.taskCount} task${c.taskCount === 1 ? '' : 's'}</span>
+    </div>`);
+  }
+
+  // Informal support: excluded from authorization, shown for context only.
+  if (result.informalSupport.weeklyMinutes > 0) {
+    tiles.push(`<div class="kpi-tile kpi-ifs" role="listitem">
+      <span class="kpi-label">Informal support</span>
+      <strong class="kpi-value">${result.informalSupport.weeklyHours}<span class="kpi-unit">h/wk</span></strong>
+      <span class="kpi-sub">Not authorized · provided unpaid</span>
+    </div>`);
+  }
+
+  $('#result-kpis').innerHTML = tiles.join('');
+
+  // Segmented share bar. Each segment is labelled in the legend below, which
+  // satisfies the light-mode contrast relief the palette validator flagged.
+  const withTime = cats.filter((c) => c.weeklyMinutes > 0);
+  const barWrap = $('.share-bar-wrap');
+  if (withTime.length === 0) {
+    barWrap.hidden = true;
+    return;
+  }
+  barWrap.hidden = false;
+
+  $('#result-share-bar').innerHTML = withTime
+    .map(
+      (c) =>
+        `<span class="share-seg" style="width:${c.shareOfTotal}%;background:${areaColor(c.key)}"
+               title="${esc(AREA_META[c.key].label)}: ${c.shareOfTotal}%"></span>`
+    )
+    .join('');
+
+  $('#result-share-legend').innerHTML = withTime
+    .map(
+      (c) =>
+        `<span class="legend-item"><i style="background:${areaColor(c.key)}" aria-hidden="true"></i>` +
+        `${esc(AREA_META[c.key].label)} <strong>${c.shareOfTotal}%</strong></span>`
+    )
+    .join('');
 }
 
 function updateFinalizeButton(result) {

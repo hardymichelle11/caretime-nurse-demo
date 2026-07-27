@@ -506,6 +506,54 @@ dialog label { display: block; font-weight: 600; font-size: .85rem; margin: var(
   .main-content { padding: 0; }
 }
 
+/* ---------- category KPI tiles ---------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.kpi-tile {
+  position: relative;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  border-left: 4px solid var(--kpi-accent, var(--border));
+}
+.kpi-tile.kpi-total {
+  background: var(--brand-soft);
+  border-left-color: var(--brand);
+}
+.kpi-tile.kpi-ifs { border-left-style: dashed; border-left-color: var(--text-muted); }
+.kpi-label {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: .76rem; color: var(--text-muted); font-weight: 600;
+}
+.kpi-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kpi-accent); flex-shrink: 0; }
+.kpi-value {
+  display: block; font-size: 1.9rem; font-weight: 700;
+  color: var(--text); margin: var(--space-2) 0 var(--space-1); line-height: 1;
+}
+.kpi-unit { font-size: .8rem; font-weight: 600; color: var(--text-muted); margin-left: 4px; }
+.kpi-sub { font-size: .72rem; color: var(--text-muted); }
+
+.share-bar-wrap { margin-top: var(--space-2); }
+.share-bar {
+  display: flex; height: 16px; border-radius: 999px; overflow: hidden;
+  background: var(--surface-alt); gap: 2px; /* 2px surface gap between segments */
+}
+.share-seg { height: 100%; min-width: 3px; }
+.share-seg:first-child { border-radius: 999px 0 0 999px; }
+.share-seg:last-child { border-radius: 0 999px 999px 0; }
+.share-legend {
+  display: flex; flex-wrap: wrap; gap: var(--space-3);
+  margin-top: var(--space-3); font-size: .78rem; color: var(--text-muted);
+}
+.legend-item { display: flex; align-items: center; gap: var(--space-2); }
+.legend-item i { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.legend-item strong { color: var(--text); }
+
 /* ---------- nurse identity & switcher ---------- */
 .topbar-right { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
 
